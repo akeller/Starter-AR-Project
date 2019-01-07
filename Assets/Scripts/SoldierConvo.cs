@@ -14,34 +14,67 @@ using FullSerializer;
 
 public class SoldierConvo : MonoBehaviour {
 
-    [SerializeField]
-    private string assistantUsername;
-    [SerializeField]
-    private string assistantPassword;
+    #region PLEASE SET THESE VARIABLES IN THE INSPECTOR
+    [Header("Watson Assistant")]
+    [Tooltip("The service URL (optional). This defaults to \"https://gateway.watsonplatform.net/assistant/api\"")]
     [SerializeField]
     private string assistantURL;
     [SerializeField]
     private string assistantWorkspace;
+    [Header("CF Authentication")]
+    [SerializeField]
+    private string assistantUsername;
+    [SerializeField]
+    private string assistantPassword;
+    [Header("IAM Authentication")]
+    [Tooltip("The IAM apikey.")]
+    [SerializeField]
+    private string assistantIamApikey;
+    [Tooltip("The IAM url used to authenticate the apikey (optional). This defaults to \"https://iam.bluemix.net/identity/token\".")]
+    [SerializeField]
+    private string assistantIamUrl;
+
+    [Header("Speech to Text")]
+    [Tooltip("The service URL (optional). This defaults to \"https://stream.watsonplatform.net/speech-to-text/api\"")]
+    [SerializeField]
+    private string SpeechToTextURL;
+    [Header("CF Authentication")]
     [SerializeField]
     private string SpeechToTextUsername;
     [SerializeField]
     private string SpeechToTextPassword;
+    [Header("IAM Authentication")]
+    [Tooltip("The IAM apikey.")]
     [SerializeField]
-    private string SpeechToTextURL;
+    private string SpeechToTextIamApikey;
+    [Tooltip("The IAM url used to authenticate the apikey (optional). This defaults to \"https://iam.bluemix.net/identity/token\".")]
+    [SerializeField]
+    private string SpeechToTextIamUrl;
+
+    [Header("Text to Speech")]
+    [SerializeField]
+    [Tooltip("The service URL (optional). This defaults to \"https://stream.watsonplatform.net/text-to-speech/api\"")]
+    private string TextToSpeechURL;
+    [Header("CF Authentication")]
     [SerializeField]
     private string TextToSpeechUsername;
     [SerializeField]
     private string TextToSpeechPassword;
+    [Header("IAM Authentication")]
+    [Tooltip("The IAM apikey.")]
     [SerializeField]
-    private string TextToSpeechURL;
+    private string TextToSpeechIamApikey;
+    [Tooltip("The IAM url used to authenticate the apikey (optional). This defaults to \"https://iam.bluemix.net/identity/token\".")]
+    [SerializeField]
+    private string TextToSpeechIamUrl;
+
+    #endregion
 
     private int _recordingRoutine = 0;
     private string _microphoneID = null;
     private AudioClip _recording = null;
     private int _recordingBufferSize = 2;
     private int _recordingHZ = 22050;
-    private byte[] _acousticResourceData;
-    private string _acousticResourceMimeType;
 
     private string outputText = "Hello";
     private Assistant _assistant;
@@ -316,18 +349,85 @@ public class SoldierConvo : MonoBehaviour {
 
 	private void InitializeServices()
 	{
-        Credentials credentials = new Credentials(assistantUsername, assistantPassword, assistantURL);
-        _assistant = new Assistant(credentials);
-        //be sure to give it a Version Date
-        _assistant.VersionDate = "2018-02-16";
+        Credentials asst_credentials = null;
+        if (!string.IsNullOrEmpty(assistantUsername) && !string.IsNullOrEmpty(assistantPassword))
+        {
 
-        Credentials credentials2 = new Credentials(TextToSpeechUsername, TextToSpeechPassword, TextToSpeechURL);
-        _textToSpeech = new TextToSpeech(credentials2);
-        //give Watson a voice type
-        _textToSpeech.Voice = VoiceType.en_US_Allison;
+            //Authenticate using username and password
+            asst_credentials = new Credentials(assistantUsername, assistantPassword, assistantURL);
+            _assistant = new Assistant(asst_credentials);
+            //be sure to give it a Version Date
+            _assistant.VersionDate = "2018-09-20";
+        }
+        else if (!string.IsNullOrEmpty(assistantIamApikey))
+        {
 
-        Credentials credentials3 = new Credentials(SpeechToTextUsername, SpeechToTextPassword, SpeechToTextURL);
-        _speechToText = new SpeechToText(credentials3);
+            //Authenticate using iamApikey
+            TokenOptions tokenOptions = new TokenOptions()
+            {
+                IamApiKey = assistantIamApikey,
+                IamUrl = assistantIamUrl
+            };
+
+            asst_credentials = new Credentials(tokenOptions, assistantURL);
+        }
+        else
+        {
+            throw new WatsonException("Please provide either username or password or IAM apikey to authenticate the service.");
+        }
+
+        Credentials tts_credentials = null;
+        if (!string.IsNullOrEmpty(TextToSpeechUsername) && !string.IsNullOrEmpty(TextToSpeechPassword))
+        {
+
+            //Authenticate using username and password
+            tts_credentials = new Credentials(TextToSpeechUsername, TextToSpeechPassword, TextToSpeechURL);
+            _textToSpeech = new TextToSpeech(tts_credentials);
+            //give Watson a voice type
+            _textToSpeech.Voice = VoiceType.en_US_Allison;
+        }
+        else if (!string.IsNullOrEmpty(assistantIamApikey))
+        {
+
+            //Authenticate using iamApikey
+            TokenOptions tokenOptions = new TokenOptions()
+            {
+                IamApiKey = TextToSpeechIamApikey,
+                IamUrl = TextToSpeechIamUrl
+            };
+
+            tts_credentials = new Credentials(tokenOptions, TextToSpeechURL);
+        }
+        else
+        {
+            throw new WatsonException("Please provide either username or password or IAM apikey to authenticate the service.");
+        }
+
+
+        Credentials stt_credentials = null;
+        if (!string.IsNullOrEmpty(SpeechToTextUsername) && !string.IsNullOrEmpty(SpeechToTextPassword))
+        {
+
+            //Authenticate using username and password
+            stt_credentials = new Credentials(SpeechToTextUsername, SpeechToTextPassword, SpeechToTextURL);
+            _speechToText = new SpeechToText(stt_credentials);
+        }
+        else if (!string.IsNullOrEmpty(SpeechToTextIamApikey))
+        {
+
+            //Authenticate using iamApikey
+            TokenOptions tokenOptions = new TokenOptions()
+            {
+                IamApiKey = SpeechToTextIamApikey,
+                IamUrl = SpeechToTextIamUrl
+            };
+
+            stt_credentials = new Credentials(tokenOptions, SpeechToTextURL);
+        }
+        else
+        {
+            throw new WatsonException("Please provide either username or password or IAM apikey to authenticate the service.");
+        }
 
         // Send first message, create inputObj w/ no context
         Message0();
@@ -335,10 +435,11 @@ public class SoldierConvo : MonoBehaviour {
         Active = true;
 
         StartRecording();   // Setup recording
-	}
+
+    }
 
 
-	private void OnFail(RESTConnector.Error error, Dictionary<string, object> customData)
+    private void OnFail(RESTConnector.Error error, Dictionary<string, object> customData)
 	{
 		Log.Error("ExampleTextToSpeech.OnFail()", "Error received: {0}", error.ToString());
 	}
