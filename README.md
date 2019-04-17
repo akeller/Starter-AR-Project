@@ -1,3 +1,5 @@
+**Not tested for Watson SDK for Unity version 3+, please use 2.x until this content is updated.**
+
 # Starter-AR-Project
 A complete Unity project using Watson SDK and Vuforia.
 
